@@ -28,6 +28,28 @@ def file_to_string(path: str) -> str:
         return f.read()
 
 
+def is_badge_line(node: marko.block.Paragraph) -> bool:
+    if not hasattr(node, "children"):
+        return False
+    for k in node.children:
+        if isinstance(k, marko.inline.LineBreak):
+            continue
+        elif isinstance(k, marko.inline.Link):
+            if (
+                k.children
+                and len(k.children) == 1
+                and isinstance(k.children[0], marko.inline.Image)
+            ):
+                return True
+            else:
+                continue
+        elif isinstance(k, marko.inline.Image):
+            continue
+        else:
+            return False
+    return False
+
+
 def get_string_from_ast(node: marko.inline.InlineElement, base=0) -> str:
     # run again on string
     if isinstance(node, marko.inline.RawText):
@@ -57,8 +79,14 @@ def get_description_from_readmeMd(markdown: str) -> str:
         # TODO: add html tag parsing
         elif isinstance(block, marko.block.HTMLBlock):
             continue
+        # skip lines with only images
+        elif is_badge_line(block):
+            continue
         # read headings
-        elif isinstance(block, marko.block.Heading) and block.inline_children:
+        elif (
+            isinstance(block, (marko.block.Heading, marko.block.SetextHeading))
+            and block.children
+        ):
             if "title" in description:
                 continue
             description["title"] = get_string_from_ast(block).strip()
@@ -122,7 +150,6 @@ def get_dir_info(path: str) -> Union[str, None]:
     """Get description of dir"""
     p = os.listdir(path)
     descriptions = {}
-    # TODO: pass file path instead of file content for optimization possibility
     for i in p:
         if i.lower() == "readme.md":
             descriptions[SOURCE_README_MD] = get_description_from_readmeMd(
