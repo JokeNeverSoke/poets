@@ -9,6 +9,12 @@ import click
 import marko
 
 
+SOURCE_PACKAGE_JSON = "packageJson"
+SOURCE_PROJECT_TOML = "pyprojectToml"
+SOURCE_READ_ME = "readme"
+DESCRIPTION_SOURCE_PRIORITY = [SOURCE_PACKAGE_JSON, SOURCE_PROJECT_TOML, SOURCE_READ_ME]
+
+
 parser = marko.parser.Parser()
 
 
@@ -44,10 +50,10 @@ def get_description_from_markdown(markdown: str) -> str:
         elif isinstance(block, marko.block.Heading) and block.inline_children:
             if "title" in description:
                 continue
-            description["title"] = get_string_from_ast(block)
+            description["title"] = get_string_from_ast(block).strip()
         # read descriptions
         else:
-            description["subtitle"] = get_string_from_ast(block)
+            description["subtitle"] = get_string_from_ast(block).strip()
             break
 
     return description
@@ -58,9 +64,9 @@ def get_description_from_packageJson(package: str) -> str:
     v = json.loads(package)
     description = {}
     if "title" in v:
-        description["name"] = v["title"]
+        description["name"] = v["title"].strip()
     if "description" in v:
-        description["subtitle"] = v["description"]
+        description["subtitle"] = v["description"].strip()
     return description
 
 
@@ -70,26 +76,24 @@ def get_description_from_pyprojectToml(string: str) -> str:
     if "tool" in meta:
         if "poetry" in meta["tool"]:
             if "name" in meta["tool"]["poetry"]:
-                description["title"] = meta["tool"]["poetry"]["name"]
+                description["title"] = meta["tool"]["poetry"]["name"].strip()
             if "description" in meta["tool"]["poetry"]:
-                description["subtitle"] = meta["tool"]["poetry"]["description"]
+                description["subtitle"] = meta["tool"]["poetry"]["description"].strip()
     return description
 
 
-def join_title_and_subtitle(meta: dict) -> str:
+def join_title_and_subtitle(title:str,subtitle:str) -> str:
     final_description = ""
-    if "title" in meta:
-        if meta["title"]:
-            final_description += click.style(meta["title"], bold=True, underline=True)
+    if title:
+        final_description += click.style(title, bold=True, underline=True)
 
-    if "subtitle" in meta:
-        if meta["subtitle"]:
-            if len(meta["subtitle"]) > 82:
-                meta["subtitle"] = meta["subtitle"][:82] + "..."
-            if final_description:
-                final_description += " - " + meta["subtitle"]
-            else:
-                final_description += meta["subtitle"]
+    if subtitle:
+        if len(subtitle) > 82:
+            subtitle = subtitle[:82] + "..."
+        if final_description:
+            final_description += " - " + subtitle
+        else:
+            final_description += subtitle
     return final_description
 
 
@@ -100,24 +104,40 @@ def get_dir_info(path: str) -> Union[str, None]:
     for i in p:
         if i.lower() == "readme.md":
             with open(os.path.join(path, i)) as f:
-                descriptions["readme"] = get_description_from_markdown(f.read())
+                descriptions[SOURCE_READ_ME] = get_description_from_markdown(f.read())
         elif i.lower() == "package.json":
             with open(os.path.join(path, i)) as f:
-                descriptions["packageJson"] = get_description_from_packageJson(f.read())
+                descriptions[SOURCE_PACKAGE_JSON] = get_description_from_packageJson(
+                    f.read()
+                )
         elif i.lower() == "pyproject.toml":
             with open(os.path.join(path, i)) as f:
-                descriptions["pyprojectToml"] = get_description_from_pyprojectToml(
+                descriptions[SOURCE_PROJECT_TOML] = get_description_from_pyprojectToml(
                     f.read()
                 )
 
-    if "packageJson" in descriptions:
-        return join_title_and_subtitle(descriptions["packageJson"])
-    elif "pyprojectToml" in descriptions:
-        return join_title_and_subtitle(descriptions["pyprojectToml"])
-    elif "readme" in descriptions:
-        return join_title_and_subtitle(descriptions["readme"])
+    title = ""
+    subtitle = ""
+    for source in DESCRIPTION_SOURCE_PRIORITY:
+        if source in descriptions:
+            if 'title' in descriptions[source]:
+                if descriptions[source]['title']:
+                    title = descriptions[source]['title']
+                    break
+    for source in DESCRIPTION_SOURCE_PRIORITY:
+        if source in descriptions:
+            if 'subtitle' in descriptions[source]:
+                if descriptions[source]['subtitle']:
+                    subtitle = descriptions[source]['subtitle']
+                    break
+    # if SOURCE_PACKAGE_JSON in descriptions:
+    #     return join_title_and_subtitle(descriptions[SOURCE_PACKAGE_JSON])
+    # elif SOURCE_PROJECT_TOML in descriptions:
+    #     return join_title_and_subtitle(descriptions[SOURCE_PROJECT_TOML])
+    # elif SOURCE_READ_ME in descriptions:
+    #     return join_title_and_subtitle(descriptions[SOURCE_READ_ME])
 
-    return
+    return join_title_and_subtitle(title, subtitle)
 
 
 @click.command()
