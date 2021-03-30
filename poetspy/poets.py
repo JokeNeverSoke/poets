@@ -2,6 +2,7 @@
 
 import os
 import json
+import re
 import toml
 from typing import Union
 
@@ -11,8 +12,15 @@ import marko
 
 SOURCE_PACKAGE_JSON = "packageJson"
 SOURCE_PROJECT_TOML = "pyprojectToml"
-SOURCE_READ_ME = "readme"
-DESCRIPTION_SOURCE_PRIORITY = [SOURCE_PACKAGE_JSON, SOURCE_PROJECT_TOML, SOURCE_READ_ME]
+SOURCE_README_MD = "readmeMd"
+SOURCE_README_RST = "readmeRst"
+
+DESCRIPTION_SOURCE_PRIORITY = [
+    SOURCE_PACKAGE_JSON,
+    SOURCE_PROJECT_TOML,
+    SOURCE_README_RST,
+    SOURCE_README_MD,
+]
 
 
 parser = marko.parser.Parser()
@@ -35,7 +43,7 @@ def get_string_from_ast(node: marko.inline.InlineElement, base=0) -> str:
     return k
 
 
-def get_description_from_markdown(markdown: str) -> str:
+def get_description_from_readmeMd(markdown: str) -> str:
     ast = parser.parse(markdown)
     description = {}
     for block in ast.children:
@@ -82,7 +90,17 @@ def get_description_from_pyprojectToml(string: str) -> str:
     return description
 
 
-def join_title_and_subtitle(title:str,subtitle:str) -> str:
+def get_description_from_readmeRst(string: str) -> str:
+    rx = re.compile(r"([\S])\1{3,}")
+    lines = [l.strip() for l in string.split("\n")]
+    lastline = ""
+    for line in lines:
+        if rx.match(line):
+            return {"title": lastline}
+        lastline = line
+
+
+def join_title_and_subtitle(title: str, subtitle: str) -> str:
     final_description = ""
     if title:
         final_description += click.style(title, bold=True, underline=True)
@@ -101,10 +119,11 @@ def get_dir_info(path: str) -> Union[str, None]:
     """Get description of dir"""
     p = os.listdir(path)
     descriptions = {}
+    # TODO: pass file path instead of file content for optimization possibility
     for i in p:
         if i.lower() == "readme.md":
             with open(os.path.join(path, i)) as f:
-                descriptions[SOURCE_READ_ME] = get_description_from_markdown(f.read())
+                descriptions[SOURCE_README_MD] = get_description_from_readmeMd(f.read())
         elif i.lower() == "package.json":
             with open(os.path.join(path, i)) as f:
                 descriptions[SOURCE_PACKAGE_JSON] = get_description_from_packageJson(
@@ -115,20 +134,25 @@ def get_dir_info(path: str) -> Union[str, None]:
                 descriptions[SOURCE_PROJECT_TOML] = get_description_from_pyprojectToml(
                     f.read()
                 )
+        elif i.lower() == "readme.rst":
+            with open(os.path.join(path, i)) as f:
+                descriptions[SOURCE_README_RST] = get_description_from_readmeRst(
+                    f.read()
+                )
 
     title = ""
     subtitle = ""
     for source in DESCRIPTION_SOURCE_PRIORITY:
         if source in descriptions:
-            if 'title' in descriptions[source]:
-                if descriptions[source]['title']:
-                    title = descriptions[source]['title']
+            if "title" in descriptions[source]:
+                if descriptions[source]["title"]:
+                    title = descriptions[source]["title"]
                     break
     for source in DESCRIPTION_SOURCE_PRIORITY:
         if source in descriptions:
-            if 'subtitle' in descriptions[source]:
-                if descriptions[source]['subtitle']:
-                    subtitle = descriptions[source]['subtitle']
+            if "subtitle" in descriptions[source]:
+                if descriptions[source]["subtitle"]:
+                    subtitle = descriptions[source]["subtitle"]
                     break
     # if SOURCE_PACKAGE_JSON in descriptions:
     #     return join_title_and_subtitle(descriptions[SOURCE_PACKAGE_JSON])
