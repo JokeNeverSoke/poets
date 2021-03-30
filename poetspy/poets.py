@@ -59,7 +59,10 @@ def get_string_from_ast(node: marko.inline.InlineElement, base=0) -> str:
         k = " "
     # skip image alt texts
     elif isinstance(node, marko.inline.Image):
-        return ""
+        k = ""
+    # skip blocks
+    elif isinstance(node, (marko.block.LinkRefDef, marko.block.ThematicBreak)):
+        k = ""
     elif isinstance(node, str):
         k = node
     else:
