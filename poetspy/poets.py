@@ -23,7 +23,9 @@ DESCRIPTION_SOURCE_PRIORITY = [
 ]
 
 
-parser = marko.parser.Parser()
+def file_to_string(path: str) -> str:
+    with open(path) as f:
+        return f.read()
 
 
 def get_string_from_ast(node: marko.inline.InlineElement, base=0) -> str:
@@ -44,6 +46,7 @@ def get_string_from_ast(node: marko.inline.InlineElement, base=0) -> str:
 
 
 def get_description_from_readmeMd(markdown: str) -> str:
+    parser = marko.parser.Parser()
     ast = parser.parse(markdown)
     description = {}
     for block in ast.children:
@@ -90,11 +93,11 @@ def get_description_from_pyprojectToml(string: str) -> str:
     return description
 
 
-def get_description_from_readmeRst(string: str) -> str:
+def get_description_from_readmeRst(filestream) -> str:
     rx = re.compile(r"([\S])\1{3,}")
-    lines = [l.strip() for l in string.split("\n")]
     lastline = ""
-    for line in lines:
+    while 1:
+        line = filestream.readline().strip()
         if rx.match(line):
             return {"title": lastline}
         lastline = line
@@ -122,23 +125,21 @@ def get_dir_info(path: str) -> Union[str, None]:
     # TODO: pass file path instead of file content for optimization possibility
     for i in p:
         if i.lower() == "readme.md":
-            with open(os.path.join(path, i)) as f:
-                descriptions[SOURCE_README_MD] = get_description_from_readmeMd(f.read())
+            descriptions[SOURCE_README_MD] = get_description_from_readmeMd(
+                file_to_string(os.path.join(path, i))
+            )
         elif i.lower() == "package.json":
-            with open(os.path.join(path, i)) as f:
-                descriptions[SOURCE_PACKAGE_JSON] = get_description_from_packageJson(
-                    f.read()
-                )
+            descriptions[SOURCE_PACKAGE_JSON] = get_description_from_packageJson(
+                file_to_string(os.path.join(path, i))
+            )
         elif i.lower() == "pyproject.toml":
-            with open(os.path.join(path, i)) as f:
-                descriptions[SOURCE_PROJECT_TOML] = get_description_from_pyprojectToml(
-                    f.read()
-                )
+
+            descriptions[SOURCE_PROJECT_TOML] = get_description_from_pyprojectToml(
+                file_to_string(os.path.join(path, i))
+            )
         elif i.lower() == "readme.rst":
             with open(os.path.join(path, i)) as f:
-                descriptions[SOURCE_README_RST] = get_description_from_readmeRst(
-                    f.read()
-                )
+                descriptions[SOURCE_README_RST] = get_description_from_readmeRst(f)
 
     title = ""
     subtitle = ""
