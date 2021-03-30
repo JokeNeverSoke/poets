@@ -102,8 +102,8 @@ def get_description_from_packageJson(package: str) -> str:
     """Gets description about a directory using its node package.json"""
     v = json.loads(package)
     description = {}
-    if "title" in v:
-        description["name"] = v["title"].strip()
+    if "name" in v:
+        description["title"] = v["name"].strip()
     if "description" in v:
         description["subtitle"] = v["description"].strip()
     return description
@@ -189,7 +189,7 @@ def get_dir_info(path: str) -> Union[str, None]:
     # elif SOURCE_READ_ME in descriptions:
     #     return join_title_and_subtitle(descriptions[SOURCE_READ_ME])
 
-    return join_title_and_subtitle(title, subtitle)
+    return title, subtitle
 
 
 @click.command()
@@ -201,8 +201,8 @@ def main():
         u[a + "/"] = get_dir_info(a)
 
     for l in u.keys():
-        if u[l]:
-            click.echo(click.style(l, fg="blue") + " " + u[l])
+        if len(u[l]) >= 1:
+            click.echo(click.style(l, fg="blue") + " " + join_title_and_subtitle(*u[l]))
         else:
             click.echo(click.style(l, fg="blue"))
 

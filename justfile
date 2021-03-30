@@ -12,3 +12,6 @@ build:
 
 publish: build
     poetry publish -u $PYPI_USERNAME -p $PYPI_PASSWORD
+
+test:
+    poetry run pytest
