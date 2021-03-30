@@ -13,5 +13,8 @@ build:
 publish: build
     poetry publish -u $PYPI_USERNAME -p $PYPI_PASSWORD
 
+bump VERSION:
+    echo {{VERSION}} | poetry run python3 bumpversion.py
+
 test:
     poetry run pytest
