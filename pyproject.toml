@@ -4,7 +4,7 @@ build-backend = "poetry.masonry.api"
 
 [tool.poetry]
 name = "poetspy"
-version = "0.1.0-alpha.3"
+version = "0.1.1-alpha.4"
 description = "A small cli util to show project directories"
 readme = "README.md"
 homepage = "https://github.com/jokeneversoke/poets"
