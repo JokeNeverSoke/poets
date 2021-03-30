@@ -2,7 +2,7 @@ _default:
     @just --list
 
 fmt:
-    black ./src || poetry run black ./src
+    black ./poetspy || poetry run black ./poetspy
 
 install:
     poetry install
@@ -11,4 +11,4 @@ build:
     poetry build
 
 publish: build
-    poetry publish
+    poetry publish -u $PYPI_USERNAME -p $PYPI_PASSWORD
