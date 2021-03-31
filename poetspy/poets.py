@@ -136,10 +136,13 @@ def get_description_from_readmeRst(filestream) -> str:
         lastline = line
 
 
-def join_title_and_subtitle(title: str, subtitle: str) -> str:
+def join_title_and_subtitle(title: str, subtitle: str, ansi: bool) -> str:
     final_description = ""
     if title:
-        final_description += click.style(title, bold=True, underline=True)
+        if ansi:
+            final_description += click.style(title, bold=True, underline=True)
+        else:
+            final_description += title
 
     if subtitle:
         if len(subtitle) > 82:
@@ -198,7 +201,8 @@ def get_dir_info(path: str) -> Union[str, None]:
 
 
 @click.command()
-def main():
+@click.option("--ansi/--no-ansi", " /-A", default=True)
+def main(ansi: bool):
     d = "."
     dirs = [o for o in os.listdir(d) if os.path.isdir(os.path.join(d, o))]
     u = {}
@@ -207,9 +211,20 @@ def main():
 
     for l in u.keys():
         if len(u[l]) >= 1:
-            click.echo(click.style(l, fg="blue") + " " + join_title_and_subtitle(*u[l]))
+            if ansi:
+                o = (
+                    click.style(l, fg="blue")
+                    + " "
+                    + join_title_and_subtitle(*u[l], ansi=ansi)
+                )
+            else:
+                o = l + " " + join_title_and_subtitle(*u[l], ansi=ansi)
         else:
-            click.echo(click.style(l, fg="blue"))
+            if ansi:
+                o = click.style(l, fg="blue")
+            else:
+                o = l
+        click.echo(o)
 
 
 if __name__ == "__main__":
