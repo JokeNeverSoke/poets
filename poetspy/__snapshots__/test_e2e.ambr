@@ -1,3 +1,21 @@
+# name: test_ansi_colors
+  '
+  [34mabc/[0m [1m[4mh5ai[0m - Modern HTTP web server index.
+  [34msome-thing/[0m [1m[4mpingtop[0m - A great python ls alternative
+  [34mpoetspy/[0m 
+  [34myeah_yeah/[0m [1m[4mpoetspy[0m - A small cli util to show project directories
+  
+  '
+---
+# name: test_ansi_colors.1
+  '
+  abc/ h5ai - Modern HTTP web server index.
+  some-thing/ pingtop - A great python ls alternative
+  poetspy/ 
+  yeah_yeah/ poetspy - A small cli util to show project directories
+  
+  '
+---
 # name: test_output
   '
   abc/ h5ai - Modern HTTP web server index.

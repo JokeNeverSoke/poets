@@ -16,5 +16,5 @@ publish: build
 bump VERSION:
     echo {{VERSION}} | poetry run python3 bumpversion.py
 
-test:
-    poetry run pytest
+test *FLAGS:
+    poetry run pytest {{FLAGS}}

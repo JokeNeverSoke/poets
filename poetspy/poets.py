@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 
-import os
 import json
+import os
 import re
-import toml
+import sys
 from typing import Union
 
 import click
 import marko
+import toml
+from loguru import logger
 
+LOGGING_LEVELS = [99, 50, 40, 30, 25, 20, 10, 5]
 
 SOURCE_PACKAGE_JSON = "packageJson"
 SOURCE_PROJECT_TOML = "pyprojectToml"
@@ -45,15 +48,20 @@ def is_badge_line(node: marko.block.Paragraph) -> bool:
                 continue
         elif isinstance(k, marko.inline.Image):
             continue
+        elif not get_string_from_markdown_ast(k).strip():
+            continue
         else:
+            logger.debug(
+                "found non-badge element {} {}", get_string_from_markdown_ast(k), k
+            )
             return False
-    return False
+    return True
 
 
-def get_string_from_ast(node: marko.inline.InlineElement, base=0) -> str:
+def get_string_from_markdown_ast(node: marko.inline.InlineElement, base=0) -> str:
     # run again on string
     if isinstance(node, marko.inline.RawText):
-        k = get_string_from_ast(node.children, base + 1)
+        k = get_string_from_markdown_ast(node.children, base + 1)
     # use space to replace linebreaks in order to save space
     elif isinstance(node, marko.inline.LineBreak):
         k = " "
@@ -68,7 +76,7 @@ def get_string_from_ast(node: marko.inline.InlineElement, base=0) -> str:
     elif isinstance(node, str):
         k = node
     else:
-        k = "".join([get_string_from_ast(t, base + 1) for t in node.children])
+        k = "".join([get_string_from_markdown_ast(t, base + 1) for t in node.children])
     return k
 
 
@@ -94,10 +102,11 @@ def get_description_from_readmeMd(markdown: str) -> str:
         ):
             if "title" in description:
                 continue
-            description["title"] = get_string_from_ast(block).strip()
+            description["title"] = get_string_from_markdown_ast(block).strip()
         # read descriptions
         else:
-            description["subtitle"] = get_string_from_ast(block).strip()
+            description["subtitle"] = get_string_from_markdown_ast(block).strip()
+            logger.trace('read description "{}"', description["subtitle"])
             break
 
     return description
@@ -109,8 +118,14 @@ def get_description_from_packageJson(package: str) -> str:
     description = {}
     if "name" in v:
         description["title"] = v["name"].strip()
+        logger.opt(colors=True).debug(
+            f"found name in package.json <u>{description['title']}</u>"
+        )
     if "description" in v:
         description["subtitle"] = v["description"].strip()
+        logger.opt(colors=True).debug(
+            f"found subtitle in package.json <u>{description['subtitle']}</u>"
+        )
     return description
 
 
@@ -121,8 +136,14 @@ def get_description_from_pyprojectToml(string: str) -> str:
         if "poetry" in meta["tool"]:
             if "name" in meta["tool"]["poetry"]:
                 description["title"] = meta["tool"]["poetry"]["name"].strip()
+                logger.opt(colors=True).debug(
+                    f"found name in poetry.toml <u>{description['title']}</u>"
+                )
             if "description" in meta["tool"]["poetry"]:
                 description["subtitle"] = meta["tool"]["poetry"]["description"].strip()
+                logger.opt(colors=True).debug(
+                    f"found description in poetry.toml <u>{description['subtitle']}</u>"
+                )
     return description
 
 
@@ -132,6 +153,9 @@ def get_description_from_readmeRst(filestream) -> str:
     while 1:
         line = filestream.readline().strip()
         if rx.match(line):
+            logger.opt(colors=True).debug(
+                f"found title line in readme.rst <u>{lastline}</u>"
+            )
             return {"title": lastline}
         lastline = line
 
@@ -159,6 +183,7 @@ def get_dir_info(path: str) -> Union[str, None]:
     p = os.listdir(path)
     descriptions = {}
     for i in p:
+        logger.trace(f"reading {i}")
         if i.lower() == "readme.md":
             descriptions[SOURCE_README_MD] = get_description_from_readmeMd(
                 file_to_string(os.path.join(path, i))
@@ -168,7 +193,6 @@ def get_dir_info(path: str) -> Union[str, None]:
                 file_to_string(os.path.join(path, i))
             )
         elif i.lower() == "pyproject.toml":
-
             descriptions[SOURCE_PROJECT_TOML] = get_description_from_pyprojectToml(
                 file_to_string(os.path.join(path, i))
             )
@@ -182,12 +206,14 @@ def get_dir_info(path: str) -> Union[str, None]:
         if source in descriptions:
             if "title" in descriptions[source]:
                 if descriptions[source]["title"]:
+                    logger.debug(f"using {source} for title")
                     title = descriptions[source]["title"]
                     break
     for source in DESCRIPTION_SOURCE_PRIORITY:
         if source in descriptions:
             if "subtitle" in descriptions[source]:
                 if descriptions[source]["subtitle"]:
+                    logger.debug(f"using {source} for subtitle")
                     subtitle = descriptions[source]["subtitle"]
                     break
     # if SOURCE_PACKAGE_JSON in descriptions:
@@ -200,31 +226,64 @@ def get_dir_info(path: str) -> Union[str, None]:
     return title, subtitle
 
 
-@click.command()
-@click.option("--ansi/--no-ansi", " /-A", default=True)
-def main(ansi: bool):
-    d = "."
-    dirs = [o for o in os.listdir(d) if os.path.isdir(os.path.join(d, o))]
-    u = {}
-    for a in dirs:
-        u[a + "/"] = get_dir_info(a)
+# @logger.catch
+@click.command(
+    help="A cli app to show directories with description. Works best with documented directories.",
+    add_help_option=False,
+)
+@click.argument("path", type=click.Path(exists=True, readable=True), default=".")
+@click.option("--ansi/--no-ansi", default=True, help="Disable ansi colored output")
+@click.option("--dry", "-D", default=False, is_flag=True, help="Gide final stdout")
+@click.option("--progress/--no-progress", default=True, help="Disable progress bar")
+@click.option("-v", "--verbose", count=True, help="Set logging level, repeat for more")
+@click.help_option("--help", "-h")
+def main(ansi: bool, verbose: int, dry: bool, progress: bool, path: str):
+    if verbose > len(LOGGING_LEVELS):
+        verbose = len(LOGGING_LEVELS)
+    logger_config = {
+        "handlers": [
+            {
+                "sink": sys.stdout,
+                "format": "<green>{time:HH:mm:ss.SSS}</green> - <lvl>{level}</lvl>: {message}",
+                "level": LOGGING_LEVELS[verbose],
+            },
+        ],
+    }
+    logger.configure(**logger_config)
+    logger.info(f"ansi status: {ansi}")
 
-    for l in u.keys():
-        if len(u[l]) >= 1:
-            if ansi:
-                o = (
-                    click.style(l, fg="blue")
-                    + " "
-                    + join_title_and_subtitle(*u[l], ansi=ansi)
-                )
+    logger.info(f"path: {path}")
+    dirs = [o for o in os.listdir(path) if os.path.isdir(os.path.join(path, o))]
+    u = {}
+    if progress and not dry:
+        with click.progressbar(dirs, label="Parsing directories") as di:
+            for a in di:
+                logger.info(f"getting info for {a}")
+                u[a + "/"] = get_dir_info(os.path.join(path, a))
+                logger.info(f'info: {u[a+"/"]}')
+    else:
+        for a in dirs:
+            logger.info(f"getting info for {a}")
+            u[a + "/"] = get_dir_info(os.path.join(path, a))
+            logger.info(f'info: {u[a+"/"]}')
+
+    if not dry:
+        for l in u.keys():
+            if len(u[l]) >= 1:
+                if ansi:
+                    o = (
+                        click.style(l, fg="blue")
+                        + " "
+                        + join_title_and_subtitle(*u[l], ansi=ansi)
+                    )
+                else:
+                    o = l + " " + join_title_and_subtitle(*u[l], ansi=ansi)
             else:
-                o = l + " " + join_title_and_subtitle(*u[l], ansi=ansi)
-        else:
-            if ansi:
-                o = click.style(l, fg="blue")
-            else:
-                o = l
-        click.echo(o)
+                if ansi:
+                    o = click.style(l, fg="blue")
+                else:
+                    o = l
+            click.echo(o)
 
 
 if __name__ == "__main__":
