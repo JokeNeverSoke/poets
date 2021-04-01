@@ -1,0 +1,12 @@
+language: python
+before_install:
+  - curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | sudo bash -s -- --to /usr/bin
+python:
+  - "3.7"
+  - "3.8"
+  - "3.9"
+install:
+  - just install
+script:
+  - just coverage
+  - poetry run coveralls

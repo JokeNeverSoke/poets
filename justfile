@@ -5,6 +5,11 @@ fmt:
     black ./poetspy || poetry run black ./poetspy
 
 install:
+    #!/usr/bin/env bash
+    if ! command -v poetry &> /dev/null
+    then
+        pip install poetry
+    fi
     poetry install
 
 build:
