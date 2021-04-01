@@ -18,3 +18,14 @@ bump VERSION:
 
 test *FLAGS:
     poetry run pytest {{FLAGS}}
+
+coverage:
+    poetry run coverage run
+
+report: coverage
+    poetry run coverage report -m
+
+report-html: coverage
+    poetry run coverage html
+    open htmlcov/index.html
+

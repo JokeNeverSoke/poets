@@ -22,6 +22,12 @@ loguru = "^0.5.3"
 black = "^20.8b1"
 pytest = "^6.2.2"
 syrupy = "^1.2.2"
+coverage = "^5.5"
 
 [tool.poetry.scripts]
 pt = "poetspy.poets:main"
+
+[tool.coverage.run]
+omit = [ "*/test_*", "*/fixtures*",]
+source = [ "./poetspy",]
+command_line = "-m pytest"
