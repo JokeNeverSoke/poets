@@ -17,8 +17,10 @@ SOURCE_PACKAGE_JSON = "packageJson"
 SOURCE_PROJECT_TOML = "pyprojectToml"
 SOURCE_README_MD = "readmeMd"
 SOURCE_README_RST = "readmeRst"
+SOURCE_POETS_JSON = "poetsJson"
 
 DESCRIPTION_SOURCE_PRIORITY = [
+    SOURCE_POETS_JSON,
     SOURCE_PACKAGE_JSON,
     SOURCE_PROJECT_TOML,
     SOURCE_README_RST,
@@ -160,6 +162,16 @@ def get_description_from_readmeRst(filestream) -> str:
         lastline = line
 
 
+def get_description_from_poetsJson(string):
+    o = json.loads(string)
+    d = {}
+    if "title" in o:
+        d["title"] = o["title"]
+    if "subtitle" in o:
+        d["subtitle"] = o["subtitle"]
+    return d
+
+
 def join_title_and_subtitle(title: str, subtitle: str, ansi: bool) -> str:
     final_description = ""
     if title:
@@ -199,6 +211,10 @@ def get_dir_info(path: str) -> Union[str, None]:
         elif i.lower() == "readme.rst":
             with open(os.path.join(path, i)) as f:
                 descriptions[SOURCE_README_RST] = get_description_from_readmeRst(f)
+        elif i.lower() == ".poets.json":
+            descriptions[SOURCE_POETS_JSON] = get_description_from_poetsJson(
+                file_to_string(os.path.join(path, i))
+            )
 
     title = ""
     subtitle = ""
