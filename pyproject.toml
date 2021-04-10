@@ -27,6 +27,7 @@ coveralls = "^3.0.1"
 
 [tool.poetry.scripts]
 pt = "poetspy.poets:main"
+ptg = "poetspy.generate:main"
 
 [tool.coverage.run]
 omit = [ "*/test_*", "*/fixtures*",]
