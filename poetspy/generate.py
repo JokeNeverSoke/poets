@@ -5,9 +5,12 @@ from pathlib import Path
 import click
 
 
-@click.command()
+@click.command(
+    short_help="Change title"
+)
 @click.argument("title", nargs=-1, required=True)
 def title(title):
+    """Modify the title of the current structure in .poets.json"""
     t = " ".join(title)
     p = Path("./.poets.json")
     if p.exists():
@@ -26,9 +29,12 @@ def title(title):
     )
 
 
-@click.command()
+@click.command(
+    short_help="Change description"
+)
 @click.argument("des", nargs=-1, required=True)
 def des(des):
+    """Modify the description of the current structure in .poets.json"""
     t = " ".join(des)
     p = Path("./.poets.json")
     if p.exists():
