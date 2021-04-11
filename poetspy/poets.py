@@ -284,7 +284,7 @@ def main(ansi: bool, verbose: int, dry: bool, progress: bool, path: str):
             logger.info(f'info: {u[a+"/"]}')
 
     if not dry:
-        for l in u.keys():
+        for l in sorted(u):
             if len(u[l]) >= 1:
                 if ansi:
                     o = (
