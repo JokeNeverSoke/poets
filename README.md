@@ -37,7 +37,6 @@ $ pt  # show my projects w/ descriptions
 deno/
 study/ study - This project was bootstrapped with Create React App.
 hanasu/ hanasu
-old-a/ artea - Example for gatsby-theme-i18n-react-i18next showing how to use react-i18next for l...
 ipfs/
 randomcodes/ randomcodes - Some personal random codes
 susume/ susume - This template should help get you started developing with Vue 3 and Typescript in ...
