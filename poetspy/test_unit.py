@@ -10,11 +10,13 @@ from fixtures import (
     EXAMPLE_README_MD3,
     EXAMPLE_README_MD4,
     EXAMPLE_README_RST1,
+    EXAMPLE_POETS_JSON1,
 )
 from poets import (
     file_to_string,
     get_description_from_readmeMd,
     get_description_from_readmeRst,
+    get_description_from_poetsJson,
     get_string_from_markdown_ast,
     is_badge_line,
     join_title_and_subtitle,
@@ -65,6 +67,13 @@ def test_title_selection(snapshot):
     )
 
 
+def test_poets_json():
+    assert get_description_from_poetsJson(EXAMPLE_POETS_JSON1) == {
+        "title": "Hanasu",
+        "subtitle": "A p2p chat app",
+    }
+
+
 def test_readme_rst():
     i = io.StringIO(EXAMPLE_README_RST1)
     assert get_description_from_readmeRst(i) == {"title": "pingtop"}
@@ -83,6 +92,9 @@ def test_get_readme_text():
     assert get_string_from_markdown_ast(ast) == "Hello link World!"
 
     ast = parser.parse("# Hello [World!](there)").children[0]
+    assert get_string_from_markdown_ast(ast) == "Hello World!"
+
+    ast = parser.parse("Hello\n[World!](there)").children[0]
     assert get_string_from_markdown_ast(ast) == "Hello World!"
 
     ast = parser.parse("![one](src) ![2](src)").children[0]

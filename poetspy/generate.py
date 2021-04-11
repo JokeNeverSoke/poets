@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 from pathlib import Path
 
 import click
@@ -16,7 +17,7 @@ def title(title):
     if p.exists():
         if p.is_dir():
             click.secho(".poets.json is a directory!", fg="red")
-            return
+            sys.exit(1)
         k = json.load(p.open())
         k["title"] = t
     else:
@@ -40,7 +41,7 @@ def des(des):
     if p.exists():
         if p.is_dir():
             click.secho(".poets.json is a directory!", fg="red")
-            return
+            sys.exit(1)
         k = json.load(p.open())
         k["subtitle"] = t
     else:

@@ -484,3 +484,9 @@ EXAMPLE_PACKAGE_JSON1 = r"""{
   }
 }
 """
+
+EXAMPLE_POETS_JSON1 = r"""{
+  "title": "Hanasu",
+  "subtitle": "A p2p chat app"
+}
+"""

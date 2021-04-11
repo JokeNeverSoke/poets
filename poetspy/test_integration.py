@@ -3,6 +3,7 @@ from fixtures import (
     EXAMPLE_PYPROJECT_TOML1,
     EXAMPLE_README_MD1,
     EXAMPLE_README_RST1,
+    EXAMPLE_POETS_JSON1,
 )
 from poets import get_dir_info
 
@@ -20,6 +21,12 @@ def test_pyproject_toml(tmpdir):
         "poetspy",
         "A small cli util to show project directories",
     )
+
+
+def test_poets_json(tmpdir):
+    poetsJson = tmpdir.join(".poets.json")
+    poetsJson.write(EXAMPLE_POETS_JSON1)
+    assert get_dir_info(str(tmpdir)) == ("Hanasu", "A p2p chat app")
 
 
 def test_package_json(tmpdir):

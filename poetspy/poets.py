@@ -4,7 +4,7 @@ import json
 import os
 import re
 import sys
-from typing import Union
+from typing import Union, Tuple
 
 import click
 import marko
@@ -190,7 +190,7 @@ def join_title_and_subtitle(title: str, subtitle: str, ansi: bool) -> str:
     return final_description
 
 
-def get_dir_info(path: str) -> Union[str, None]:
+def get_dir_info(path: str) -> (str, str):
     """Get description of dir"""
     p = os.listdir(path)
     descriptions = {}
