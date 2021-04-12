@@ -9,6 +9,7 @@ description = "A small cli util to show project directories"
 readme = "README.md"
 homepage = "https://github.com/jokeneversoke/poets"
 authors = [ "JokeNeverSoke <zengjoseph@hotmail.com>",]
+classifiers = [ "Development Status :: 3 - Alpha", "Intended Audience :: Developers", "Topic :: Terminals", "Topic :: Utilities",]
 license = "MIT"
 
 [tool.poetry.dependencies]
