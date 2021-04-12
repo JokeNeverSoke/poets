@@ -12,7 +12,7 @@ from fixtures import (
     EXAMPLE_README_RST1,
     EXAMPLE_POETS_JSON1,
 )
-from poets import (
+from poetspy.poets import (
     file_to_string,
     get_description_from_readmeMd,
     get_description_from_readmeRst,

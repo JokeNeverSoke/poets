@@ -10,8 +10,8 @@ from fixtures import (
     EXAMPLE_README_MD1,
     EXAMPLE_README_RST1,
 )
-from poets import main as pt_main
-from generate import main as ptg_main
+from poetspy.poets import main as pt_main
+from poetspy.generate import main as ptg_main
 
 runner = CliRunner()
 

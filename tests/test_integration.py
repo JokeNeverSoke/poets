@@ -5,7 +5,7 @@ from fixtures import (
     EXAMPLE_README_RST1,
     EXAMPLE_POETS_JSON1,
 )
-from poets import get_dir_info
+from poetspy.poets import get_dir_info
 
 
 def test_readme_md(tmpdir):
