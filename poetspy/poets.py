@@ -45,9 +45,9 @@ def is_badge_line(node: marko.block.Paragraph) -> bool:
                 and len(k.children) == 1
                 and isinstance(k.children[0], marko.inline.Image)
             ):
-                return True
-            else:
                 continue
+            else:
+                return True
         elif isinstance(k, marko.inline.Image):
             continue
         elif not get_string_from_markdown_ast(k).strip():
@@ -98,6 +98,7 @@ def get_description_from_readmeMd(markdown: str) -> str:
         elif is_badge_line(block):
             continue
         # read headings
+        # TODO: find title & subtitle on heading type (H1/H2/H3)
         elif (
             isinstance(block, (marko.block.Heading, marko.block.SetextHeading))
             and block.children

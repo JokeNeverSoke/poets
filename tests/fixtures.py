@@ -1,6 +1,8 @@
 EXAMPLE_README_MD1 = r"""
 # PoetsPy
 
+<div>Yay <span>Yay</span> Yay</div>
+
 A great python `ls` alternative
 
 [Some Random Link](https://github.com)

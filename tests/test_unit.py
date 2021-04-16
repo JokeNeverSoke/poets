@@ -59,6 +59,10 @@ def test_title_selection(snapshot):
         == "Poetspy - Another ls alternative"
     )
     assert (
+        join_title_and_subtitle("", "Another ls alternative", False)
+        == "Another ls alternative"
+    )
+    assert (
         join_title_and_subtitle("Poetspy", "j" * 99, False)
         == "Poetspy - " + "j" * 82 + "..."
     )
@@ -85,6 +89,9 @@ def test_get_readme_text():
     ast = parser.parse("**Hello** *World!*").children[0]
     assert get_string_from_markdown_ast(ast) == "Hello World!"
 
+    ast = parser.parse(" ").children[0]
+    assert get_string_from_markdown_ast(ast) == " "
+
     ast = parser.parse("Hello ![img](inserted) *World!*").children[0]
     assert get_string_from_markdown_ast(ast) == "Hello  World!"
 
@@ -97,11 +104,22 @@ def test_get_readme_text():
     ast = parser.parse("Hello\n[World!](there)").children[0]
     assert get_string_from_markdown_ast(ast) == "Hello World!"
 
+    # Line with no text is badge line
+    ast = parser.parse("![]() []()").children[0]
+    assert is_badge_line(ast) == True
+
+    # Images with alt text are badges
     ast = parser.parse("![one](src) ![2](src)").children[0]
     assert is_badge_line(ast) == True
 
+    # Text between images is not badge line
     ast = parser.parse("![one](src) some text![2](src)").children[0]
     assert is_badge_line(ast) == False
 
+    # Images with link is badge line
     ast = parser.parse("[![one](src)](other_source) ![2](src)").children[0]
     assert is_badge_line(ast) == True
+
+    # Empty line is not badge line
+    ast = parser.parse(" ").children[0]
+    assert is_badge_line(ast) == False
