@@ -4,7 +4,8 @@ import json
 import os
 import re
 import sys
-from typing import Union, Tuple
+import threading
+from queue import Queue
 
 import click
 import marko
@@ -243,6 +244,37 @@ def get_dir_info(path: str) -> (str, str):
     return title, subtitle
 
 
+def thread_worker(q: Queue, path, u, f=None):
+    while 1:
+        a = q.get()
+        logger.info(f"getting info for {a}")
+        u[a + "/"] = get_dir_info(os.path.join(path, a))
+        logger.info(f'info: {u[a+"/"]}')
+        q.task_done()
+        if f:
+            f.update(1)
+
+
+def loop_dirs(dirs, path, thread, f=None):
+    u = {}
+    if thread and thread > 0:
+        q = Queue()
+        for p in dirs:
+            q.put(p)
+        threads = []
+        for _ in range(thread):
+            worker = threading.Thread(target=thread_worker, args=(q, path, u, f),daemon=True)
+            worker.start()
+            threads.append(worker)
+        q.join()
+    else:
+        for a in dirs:
+            logger.info(f"getting info for {a}")
+            u[a + "/"] = get_dir_info(os.path.join(path, a))
+            logger.info(f'info: {u[a+"/"]}')
+    return u
+
+
 # @logger.catch
 @click.command(
     help="A cli app to show directories with description. Works best with documented directories.",
@@ -253,8 +285,11 @@ def get_dir_info(path: str) -> (str, str):
 @click.option("--dry", "-D", default=False, is_flag=True, help="Gide final stdout")
 @click.option("--progress/--no-progress", default=True, help="Disable progress bar")
 @click.option("-v", "--verbose", count=True, help="Set logging level, repeat for more")
+@click.option(
+    "-x", "--thread", type=int, default=0, help="Number of threads, 0 to disable"
+)
 @click.help_option("--help", "-h")
-def main(ansi: bool, verbose: int, dry: bool, progress: bool, path: str):
+def main(ansi: bool, verbose: int, dry: bool, progress: bool, path: str, thread: int):
     if verbose > len(LOGGING_LEVELS):
         verbose = len(LOGGING_LEVELS)
     logger_config = {
@@ -271,18 +306,16 @@ def main(ansi: bool, verbose: int, dry: bool, progress: bool, path: str):
 
     logger.info(f"path: {path}")
     dirs = [o for o in os.listdir(path) if os.path.isdir(os.path.join(path, o))]
-    u = {}
+
     if progress and not dry:
-        with click.progressbar(dirs, label="Parsing directories") as di:
-            for a in di:
-                logger.info(f"getting info for {a}")
-                u[a + "/"] = get_dir_info(os.path.join(path, a))
-                logger.info(f'info: {u[a+"/"]}')
+        if thread:
+            with click.progressbar(length=len(dirs), label="Parsing directories") as f:
+                u = loop_dirs(dirs, path, thread, f)
+        else:
+            with click.progressbar(dirs, label="Parsing directories") as di:
+                u = loop_dirs(di, path, thread)
     else:
-        for a in dirs:
-            logger.info(f"getting info for {a}")
-            u[a + "/"] = get_dir_info(os.path.join(path, a))
-            logger.info(f'info: {u[a+"/"]}')
+        u = loop_dirs(dirs, path, thread)
 
     if not dry:
         for l in sorted(u):

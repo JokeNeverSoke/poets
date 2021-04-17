@@ -33,6 +33,7 @@ def test_output(snapshot, project_dir):
     assert o == snapshot
     os.chdir(project_dir)
     assert o == runner.invoke(pt_main).output
+    assert o == runner.invoke(pt_main, ['-x', '3']).output
 
 
 def test_ansi_colors(snapshot, project_dir):
