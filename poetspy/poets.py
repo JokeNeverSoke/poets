@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+from __future__ import annotations
 import json
 import os
 import re
@@ -192,7 +192,7 @@ def join_title_and_subtitle(title: str, subtitle: str, ansi: bool) -> str:
     return final_description
 
 
-def get_dir_info(path: str) -> (str, str):
+def get_dir_info(path: str) -> tuple[str, str]:
     """Get description of dir"""
     p = os.listdir(path)
     descriptions = {}
@@ -263,7 +263,9 @@ def loop_dirs(dirs, path, thread, f=None):
             q.put(p)
         threads = []
         for _ in range(thread):
-            worker = threading.Thread(target=thread_worker, args=(q, path, u, f),daemon=True)
+            worker = threading.Thread(
+                target=thread_worker, args=(q, path, u, f), daemon=True
+            )
             worker.start()
             threads.append(worker)
         q.join()
