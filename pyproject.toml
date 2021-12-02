@@ -13,7 +13,7 @@ classifiers = [ "Development Status :: 3 - Alpha", "Intended Audience :: Develop
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.8"
 marko = "^1.0.1"
 click = "^8.0.0"
 toml = "^0.10.2"
