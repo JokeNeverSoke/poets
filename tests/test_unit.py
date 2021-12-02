@@ -13,6 +13,7 @@ from fixtures import (
     EXAMPLE_POETS_JSON1,
 )
 from poetspy.poets import (
+    Description,
     file_to_string,
     get_description_from_readmeMd,
     get_description_from_readmeRst,
@@ -53,21 +54,26 @@ def test_path_reader(tmp_path):
     assert file_to_string(v) == "happy birthday!你好!"
 
 
+def f(a, b) -> Description:
+    return {"title": a, "subtitle": b}
+
+
 def test_title_selection(snapshot):
     assert (
-        join_title_and_subtitle("Poetspy", "Another ls alternative", False)
+        join_title_and_subtitle(f("Poetspy", "Another ls alternative"), False)
         == "Poetspy - Another ls alternative"
     )
     assert (
-        join_title_and_subtitle("", "Another ls alternative", False)
+        join_title_and_subtitle(f("", "Another ls alternative"), False)
         == "Another ls alternative"
     )
     assert (
-        join_title_and_subtitle("Poetspy", "j" * 99, False)
+        join_title_and_subtitle(f("Poetspy", "j" * 99), False)
         == "Poetspy - " + "j" * 82 + "..."
     )
     assert (
-        join_title_and_subtitle("Poetspy", "Another ls alternative", True) == snapshot
+        join_title_and_subtitle(f("Poetspy", "Another ls alternative"), True)
+        == snapshot
     )
 
 
@@ -80,7 +86,7 @@ def test_poets_json():
 
 def test_readme_rst():
     i = io.StringIO(EXAMPLE_README_RST1)
-    assert get_description_from_readmeRst(i) == {"title": "pingtop"}
+    assert get_description_from_readmeRst(i) == {"title": "pingtop", "subtitle": ""}
 
 
 def test_get_readme_text():

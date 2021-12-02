@@ -29,17 +29,22 @@ def project_dir(tmpdir):
 
 
 def test_output(snapshot, project_dir):
-    o = runner.invoke(pt_main, [str(project_dir)]).output
+    o = runner.invoke(pt_main, [str(project_dir), "--no-progress"]).output
     assert o == snapshot
     os.chdir(project_dir)
-    assert o == runner.invoke(pt_main).output
-    assert o == runner.invoke(pt_main, ['-x', '3']).output
+    assert o == runner.invoke(pt_main, ["--no-progress"]).output
+    assert o == runner.invoke(pt_main, ["-x", "3", "--no-progress"]).output
 
 
 def test_ansi_colors(snapshot, project_dir):
-    assert runner.invoke(pt_main, [str(project_dir)], color=True).output == snapshot
     assert (
-        runner.invoke(pt_main, [str(project_dir), "--no-ansi"], color=True).output
+        runner.invoke(pt_main, [str(project_dir), "--no-progress"], color=True).output
+        == snapshot
+    )
+    assert (
+        runner.invoke(
+            pt_main, [str(project_dir), "--no-ansi", "--no-progress"], color=True
+        ).output
         == snapshot
     )
 
@@ -76,11 +81,6 @@ def test_generate(tmpdir):
         "title": "Yay",
         "subtitle": "A description without typo",
     }
-    os.chdir("..")
-    assert (
-        "project/ Yay - A description without typo"
-        in runner.invoke(pt_main, ["--no-ansi"], color=True).output
-    )
 
 
 def test_poets_json_dir(tmpdir):

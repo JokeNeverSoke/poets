@@ -6,9 +6,11 @@ import re
 import sys
 import threading
 from queue import Queue
+from typing import Iterable, cast, TypedDict
 
 import click
 import marko
+import marko.inline
 import toml
 from loguru import logger
 
@@ -27,6 +29,11 @@ DESCRIPTION_SOURCE_PRIORITY = [
     SOURCE_README_RST,
     SOURCE_README_MD,
 ]
+
+
+class Description(TypedDict):
+    title: str
+    subtitle: str
 
 
 def file_to_string(path: str) -> str:
@@ -61,7 +68,13 @@ def is_badge_line(node: marko.block.Paragraph) -> bool:
     return True
 
 
-def get_string_from_markdown_ast(node: marko.inline.InlineElement, base=0) -> str:
+def get_string_from_markdown_ast(
+    node: marko.inline.InlineElement
+    | str
+    | marko.block.Heading
+    | marko.block.SetextHeading,
+    base=0,
+) -> str:
     # run again on string
     if isinstance(node, marko.inline.RawText):
         k = get_string_from_markdown_ast(node.children, base + 1)
@@ -83,10 +96,10 @@ def get_string_from_markdown_ast(node: marko.inline.InlineElement, base=0) -> st
     return k
 
 
-def get_description_from_readmeMd(markdown: str) -> dict[str, str]:
+def get_description_from_readmeMd(markdown: str) -> Description:
     parser = marko.parser.Parser()
-    ast = parser.parse(markdown)
-    description = {}
+    ast = cast(marko.block.BlockElement, parser.parse(markdown))
+    description: Description = {"title": "", "subtitle": ""}
     for block in ast.children:
         # skip blank lines
         if isinstance(block, marko.block.BlankLine):
@@ -104,7 +117,7 @@ def get_description_from_readmeMd(markdown: str) -> dict[str, str]:
             isinstance(block, (marko.block.Heading, marko.block.SetextHeading))
             and block.children
         ):
-            if "title" in description:
+            if description["title"] != "":
                 continue
             description["title"] = get_string_from_markdown_ast(block).strip()
         # read descriptions
@@ -116,10 +129,10 @@ def get_description_from_readmeMd(markdown: str) -> dict[str, str]:
     return description
 
 
-def get_description_from_packageJson(package: str) -> dict[str, str]:
+def get_description_from_packageJson(package: str) -> Description:
     """Gets description about a directory using its node package.json"""
     v = json.loads(package)
-    description = {}
+    description: Description = {"title": "", "subtitle": ""}
     if "name" in v:
         description["title"] = v["name"].strip()
         logger.opt(colors=True).debug(
@@ -133,9 +146,9 @@ def get_description_from_packageJson(package: str) -> dict[str, str]:
     return description
 
 
-def get_description_from_pyprojectToml(string: str) -> dict[str, str]:
+def get_description_from_pyprojectToml(string: str) -> Description:
     meta = toml.loads(string)
-    description = {}
+    description: Description = {"title": "", "subtitle": ""}
     if "tool" in meta:
         if "poetry" in meta["tool"]:
             if "name" in meta["tool"]["poetry"]:
@@ -151,7 +164,7 @@ def get_description_from_pyprojectToml(string: str) -> dict[str, str]:
     return description
 
 
-def get_description_from_readmeRst(filestream) -> dict[str, str]:
+def get_description_from_readmeRst(filestream) -> Description:
     rx = re.compile(r"([\S])\1{3,}")
     lastline = ""
     while 1:
@@ -160,13 +173,14 @@ def get_description_from_readmeRst(filestream) -> dict[str, str]:
             logger.opt(colors=True).debug(
                 f"found title line in readme.rst <u>{lastline}</u>"
             )
-            return {"title": lastline}
+            return {"title": lastline, "subtitle": ""}
         lastline = line
+    return {"title": "", "subtitle": ""}
 
 
-def get_description_from_poetsJson(string) -> dict[str, str]:
+def get_description_from_poetsJson(string) -> Description:
     o = json.loads(string)
-    d = {}
+    d: Description = {"title": "", "subtitle": ""}
     if "title" in o:
         d["title"] = o["title"]
     if "subtitle" in o:
@@ -174,7 +188,8 @@ def get_description_from_poetsJson(string) -> dict[str, str]:
     return d
 
 
-def join_title_and_subtitle(title: str, subtitle: str, ansi: bool) -> str:
+def join_title_and_subtitle(d: Description, ansi: bool = False) -> str:
+    title, subtitle = d["title"], d["subtitle"]
     final_description = ""
     if title:
         if ansi:
@@ -192,7 +207,7 @@ def join_title_and_subtitle(title: str, subtitle: str, ansi: bool) -> str:
     return final_description
 
 
-def get_dir_info(path: str) -> dict[str, str]:
+def get_dir_info(path: str) -> dict[str, Description]:
     """Get full description of dir `path`"""
     p = os.listdir(path)
     descriptions = {}
@@ -221,7 +236,7 @@ def get_dir_info(path: str) -> dict[str, str]:
     return descriptions
 
 
-def filter_description(descriptions: dict[str, str]) -> tuple[str, str]:
+def filter_description(descriptions: dict[str, Description]) -> Description:
     """Uses the priority table to pick the best title and description"""
     title = ""
     subtitle = ""
@@ -240,7 +255,7 @@ def filter_description(descriptions: dict[str, str]) -> tuple[str, str]:
                     subtitle = descriptions[source]["subtitle"]
                     break
 
-    return title, subtitle
+    return {"title": title, "subtitle": subtitle}
 
 
 def thread_worker(q: Queue, path, u, f=None) -> None:
@@ -255,8 +270,10 @@ def thread_worker(q: Queue, path, u, f=None) -> None:
             f.update(1)
 
 
-def loop_dirs(dirs, path, thread, f=None) -> dict[str, str]:
-    u = {}
+def loop_dirs(
+    dirs: Iterable[str], path: str, thread: int, f=None
+) -> dict[str, Description]:
+    u: dict[str, Description] = {}
     if thread and thread > 0:
         q = Queue()
         for p in dirs:
@@ -272,7 +289,7 @@ def loop_dirs(dirs, path, thread, f=None) -> dict[str, str]:
     else:
         for a in dirs:
             logger.info(f"getting info for {a}")
-            u[a + "/"] = get_dir_info(os.path.join(path, a))
+            u[a + "/"] = filter_description(get_dir_info(os.path.join(path, a)))
             logger.info(f'info: {u[a+"/"]}')
     return u
 
@@ -326,10 +343,10 @@ def main(ansi: bool, verbose: int, dry: bool, progress: bool, path: str, thread:
                     o = (
                         click.style(l, fg="blue")
                         + " "
-                        + join_title_and_subtitle(*u[l], ansi=ansi)
+                        + join_title_and_subtitle(u[l], ansi=ansi)
                     )
                 else:
-                    o = l + " " + join_title_and_subtitle(*u[l], ansi=ansi)
+                    o = l + " " + join_title_and_subtitle(u[l], ansi=ansi)
             else:
                 if ansi:
                     o = click.style(l, fg="blue")
