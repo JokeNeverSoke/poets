@@ -83,7 +83,7 @@ def get_string_from_markdown_ast(node: marko.inline.InlineElement, base=0) -> st
     return k
 
 
-def get_description_from_readmeMd(markdown: str) -> str:
+def get_description_from_readmeMd(markdown: str) -> dict[str, str]:
     parser = marko.parser.Parser()
     ast = parser.parse(markdown)
     description = {}
@@ -116,7 +116,7 @@ def get_description_from_readmeMd(markdown: str) -> str:
     return description
 
 
-def get_description_from_packageJson(package: str) -> str:
+def get_description_from_packageJson(package: str) -> dict[str, str]:
     """Gets description about a directory using its node package.json"""
     v = json.loads(package)
     description = {}
@@ -133,7 +133,7 @@ def get_description_from_packageJson(package: str) -> str:
     return description
 
 
-def get_description_from_pyprojectToml(string: str) -> str:
+def get_description_from_pyprojectToml(string: str) -> dict[str, str]:
     meta = toml.loads(string)
     description = {}
     if "tool" in meta:
@@ -151,7 +151,7 @@ def get_description_from_pyprojectToml(string: str) -> str:
     return description
 
 
-def get_description_from_readmeRst(filestream) -> str:
+def get_description_from_readmeRst(filestream) -> dict[str, str]:
     rx = re.compile(r"([\S])\1{3,}")
     lastline = ""
     while 1:
@@ -164,7 +164,7 @@ def get_description_from_readmeRst(filestream) -> str:
         lastline = line
 
 
-def get_description_from_poetsJson(string):
+def get_description_from_poetsJson(string) -> dict[str, str]:
     o = json.loads(string)
     d = {}
     if "title" in o:
@@ -192,8 +192,8 @@ def join_title_and_subtitle(title: str, subtitle: str, ansi: bool) -> str:
     return final_description
 
 
-def get_dir_info(path: str) -> tuple[str, str]:
-    """Get description of dir"""
+def get_dir_info(path: str) -> dict[str, str]:
+    """Get full description of dir `path`"""
     p = os.listdir(path)
     descriptions = {}
     for i in p:
@@ -218,6 +218,11 @@ def get_dir_info(path: str) -> tuple[str, str]:
                 file_to_string(os.path.join(path, i))
             )
 
+    return descriptions
+
+
+def filter_description(descriptions: dict[str, str]) -> tuple[str, str]:
+    """Uses the priority table to pick the best title and description"""
     title = ""
     subtitle = ""
     for source in DESCRIPTION_SOURCE_PRIORITY:
@@ -234,28 +239,23 @@ def get_dir_info(path: str) -> tuple[str, str]:
                     logger.debug(f"using {source} for subtitle")
                     subtitle = descriptions[source]["subtitle"]
                     break
-    # if SOURCE_PACKAGE_JSON in descriptions:
-    #     return join_title_and_subtitle(descriptions[SOURCE_PACKAGE_JSON])
-    # elif SOURCE_PROJECT_TOML in descriptions:
-    #     return join_title_and_subtitle(descriptions[SOURCE_PROJECT_TOML])
-    # elif SOURCE_READ_ME in descriptions:
-    #     return join_title_and_subtitle(descriptions[SOURCE_READ_ME])
 
     return title, subtitle
 
 
-def thread_worker(q: Queue, path, u, f=None):
+def thread_worker(q: Queue, path, u, f=None) -> None:
     while 1:
         a = q.get()
         logger.info(f"getting info for {a}")
-        u[a + "/"] = get_dir_info(os.path.join(path, a))
+        descriptions = get_dir_info(os.path.join(path, a))
+        u[a + "/"] = filter_description(descriptions)
         logger.info(f'info: {u[a+"/"]}')
         q.task_done()
         if f:
             f.update(1)
 
 
-def loop_dirs(dirs, path, thread, f=None):
+def loop_dirs(dirs, path, thread, f=None) -> dict[str, str]:
     u = {}
     if thread and thread > 0:
         q = Queue()

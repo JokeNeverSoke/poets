@@ -6,9 +6,7 @@ from pathlib import Path
 import click
 
 
-@click.command(
-    short_help="Change title"
-)
+@click.command(short_help="Change title")
 @click.argument("title", nargs=-1, required=True)
 def title(title):
     """Modify the title of the current structure in .poets.json"""
@@ -30,9 +28,7 @@ def title(title):
     )
 
 
-@click.command(
-    short_help="Change description"
-)
+@click.command(short_help="Change description")
 @click.argument("des", nargs=-1, required=True)
 def des(des):
     """Modify the description of the current structure in .poets.json"""
@@ -56,6 +52,7 @@ def des(des):
 
 @click.group()
 def main():
+    """Placeholder for subcommands"""
     pass
 
 
